@@ -37,7 +37,7 @@ function Update-MsolLicensedUsersFromGroup {
 	Param(
 		[Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0,HelpMessage="Group(s)")] [Object[]]$ADGroup,
 		[Parameter(Mandatory=$true,Position=1,ParameterSetName="SKUFromList",HelpMessage="The AccountSkuId(s) to match group membership against(see Get-MsolAccountSku).  If more then one value provided they are stepped through for each group provided.  If all groups should reference one sku, provide only one.  If each group should match a different sku, provide a sku for each group in same order of groups.")] [String[]]$AccountSkuId,
-		[Parameter(Mandatory=$true,Position=1,ParameterSetName="SKUFromGroup",HelpMessage="The AD Group property to retrieve the AccountSkuId to match group membership against(see Get-MsolAccountSku).  Use instead of AccountSkuID")] [alias("Property")] [Object]$GroupSKUProperty
+		[Parameter(Mandatory=$true,Position=1,ParameterSetName="SKUFromGroup",HelpMessage="The AD Group property to retrieve the AccountSkuId to match group membership against(see Get-MsolAccountSku).  Use instead of AccountSkuID.  Defaults to the info/note attribute.")] [alias("Property")] [Object]$GroupSKUProperty = "info"
 	)
 	Begin {
 		$groupCounter = 0
@@ -89,7 +89,11 @@ function Update-MsolLicensedUsersFromGroup {
 			#Get ADGroup, but first make sure it is null so we can detect failure
 			$objADGroup = $null
 			#If value is a string or somother object passable to Get-ADGroup
-			$objADGroup = Get-ADGroup -Identity $valADGroup -Property $GroupSKUProperty
+			if ($skuByArray) {
+				$objADGroup = Get-ADGroup -Identity $valADGroup
+			} else {
+				$objADGroup = Get-ADGroup -Identity $valADGroup -Properties $GroupSKUProperty
+			}
 			if ($objADGroup) {	#Group exists
 				#Track accross process calls group count
 				$groupCounter++
@@ -146,7 +150,7 @@ function Update-MsolLicensedUsersFromGroup {
 				Invoke-Expression $_.Command
 				Write-Verbose $_.Command
 			} else {
-				Write-Verbose $_.Command
+				Write-Host $_.Command
 			}
 		}
 		
@@ -172,7 +176,7 @@ function Update-MsolUserUsageLocation {
 	Param(
 		[Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0,HelpMessage="Group(s)")] [Object[]]$ADGroup,
 		[Parameter(Mandatory=$true,Position=1,ParameterSetName="UsageLocationFromList",HelpMessage="The UsageLocation(s) to set for group membership.  If more then one value provided they are stepped through for each group provided.  If all groups should reference one sku, provide only one.  If each group should match a different UsageLocation, provide a value for each group in same order of groups.")] [String[]]$UsageLocation = @("US"),
-		[Parameter(Mandatory=$true,Position=1,ParameterSetName="UsageLocationFromGroup",HelpMessage="The AD Group property to retrieve the UsageLocation value from.")] [alias("Property")] [Object]$GroupUsageLocationProperty
+		[Parameter(Mandatory=$true,Position=1,ParameterSetName="UsageLocationFromGroup",HelpMessage="The AD Group property to retrieve the UsageLocation value from.  Defaults to the info/note attribute.")] [alias("Property")] [Object]$GroupUsageLocationProperty = "info"
 	)
 	Begin {
 		$newUsageLocation = ""
@@ -187,7 +191,7 @@ function Update-MsolUserUsageLocation {
 		$ProcessScriptBlock = {
 			$cmdString = "Set-MSOLUser -UsageLocation '" + $UsageLocation + "' -UserPrincipalName " + $_.UserPrincipalName
 			Write-Verbose $cmdString
-			if ($PSCmdlet.ShouldProcess ($_.UserPrincipleName)) {
+			if ($PSCmdlet.ShouldProcess($_.UserPrincipalName)) {
 				Invoke-Expression $cmdString
 			}
 		}
@@ -199,7 +203,11 @@ function Update-MsolUserUsageLocation {
 			#Get ADGroup, but first make sure it is null so we can detect failure
 			$objADGroup = $null
 			#If value is a string or somother object passable to Get-ADGroup
-			$objADGroup = Get-ADGroup -Identity $valADGroup -Properties $GroupSKUProperty
+			if ($locationByArray) {
+				$objADGroup = Get-ADGroup -Identity $valADGroup
+			} else {
+				$objADGroup = Get-ADGroup -Identity $valADGroup -Properties $GroupSKUProperty
+			}
 			if ($objADGroup) {	#Group exists
 				#Track accross process calls group count
 				$groupCounter++
@@ -222,4 +230,4 @@ function Update-MsolUserUsageLocation {
 }
 
 Echo "Module Loaded"
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup"
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation"
