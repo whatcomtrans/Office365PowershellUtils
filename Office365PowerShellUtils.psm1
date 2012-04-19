@@ -121,7 +121,7 @@ function Update-MsolLicensedUsersFromGroup {
 					foreach ($user in $compareResults) {
 						if (!$user.UserPrincipalName) {
 							Write-Verbose "Unable to find UserPrincipalName for $user"
-						}else 
+						} else {
 							if (!$changes.ContainsKey($user.UserPrincipalName)) {
 								$newObj = New-Object -TypeName PSObject -Property @{UserPrincipalName = $user.UserPrincipalName; RemoveSkuID = ""; AddSkuID = ""}
 								Add-Member -InputObject $newObj -Name 'SortOrder' -Value $SortOrderScriptBlock -MemberType ScriptProperty
