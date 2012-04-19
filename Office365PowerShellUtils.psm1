@@ -1,10 +1,7 @@
-﻿
-Import-Module MSOnline
-Import-Module ActiveDirectory
 
 <#
 .SYNOPSIS
-Filters objects returned by Get-MsolUser for users which have a particular license AccountSkuId.
+Filters objects returned by Get-MsolUser for users which have a particular license AccountSkuId.  Requires MSOnline module and active connection to MSOL services.
 
 .EXAMPLE
 Get-MsolUser | Find-MsolUsersWithLicense "whatcomtrans:ENTERPRISEPACK"
@@ -27,7 +24,7 @@ function Find-MsolUsersWithLicense {
 
 <#
 .SYNOPSIS
-Performs one-way sync of user license assignment with group membership.
+Performs one-way sync of user license assignment with group membership.  Requires ActiveDirectory and MSOnline modules and active connection to MSOL services.
 
 .EXAMPLE
 TODO
@@ -166,7 +163,7 @@ function Update-MsolLicensedUsersFromGroup {
 
 <#
 .SYNOPSIS
-Performs one-way sync of user license assignment with group membership.
+Performs one-way sync of user license assignment with group membership.  Requires ActiveDirectory and MSOnline modules and active connection to MSOL services.
 
 .EXAMPLE
 TODO
