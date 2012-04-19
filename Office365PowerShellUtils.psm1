@@ -1,4 +1,3 @@
-
 <#
 .SYNOPSIS
 Filters objects returned by Get-MsolUser for users which have a particular license AccountSkuId.  Requires MSOnline module and active connection to MSOL services.
@@ -190,6 +189,8 @@ function Update-MsolUserUsageLocation {
 			Write-Verbose $cmdString
 			if ($PSCmdlet.ShouldProcess($_.UserPrincipalName)) {
 				Invoke-Expression $cmdString
+			} else {
+				Write-Host $_.Command
 			}
 		}
 	}
