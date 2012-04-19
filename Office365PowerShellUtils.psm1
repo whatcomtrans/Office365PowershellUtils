@@ -147,7 +147,7 @@ function Update-MsolLicensedUsersFromGroup {
 	End {
 		$ProcessScriptBlock = {
 			if ($PSCmdlet.ShouldProcess($_.UserPrincipalName)) {
-				Invoke-Expression $_.Command
+				Invoke-Expression $_.Command -ErrorAction continue
 				Write-Verbose $_.Command
 			} else {
 				Write-Host $_.Command
@@ -192,7 +192,7 @@ function Update-MsolUserUsageLocation {
 			$cmdString = "Set-MSOLUser -UsageLocation '" + $UsageLocation + "' -UserPrincipalName " + $_.UserPrincipalName
 			Write-Verbose $cmdString
 			if ($PSCmdlet.ShouldProcess($_.UserPrincipalName)) {
-				Invoke-Expression $cmdString
+				Invoke-Expression $cmdString -ErrorAction continue
 			} else {
 				Write-Host $cmdString
 			}
