@@ -119,17 +119,21 @@ function Update-MsolLicensedUsersFromGroup {
 					$compareResults = Compare-Object -ReferenceObject $groupsUsers -DifferenceObject $msolLicUsers -PassThru -Property UserPrincipalName
 					
 					foreach ($user in $compareResults) {
-						if (!$changes.ContainsKey($user.UserPrincipalName)) {
-							$newObj = New-Object -TypeName PSObject -Property @{UserPrincipalName = $user.UserPrincipalName; RemoveSkuID = ""; AddSkuID = ""}
-							Add-Member -InputObject $newObj -Name 'SortOrder' -Value $SortOrderScriptBlock -MemberType ScriptProperty
-							Add-Member -InputObject $newObj -Name 'Command' -Value $CommandScriptBlock -MemberType ScriptProperty
-							Add-Member -InputObject $newObj -Name 'ChangeType' -Value $ChangeTypeScriptBlock -MemberType ScriptProperty
-							$changes.Add($user.UserPrincipalName, $newObj)
-						}
-						if ($user.SideIndicator -eq '=>') {	#remove
-							($changes.Item($user.UserPrincipalName)).RemoveSkuID = $skuid
-						} else {	#add
-							($changes.Item($user.UserPrincipalName)).AddSkuID = $skuid
+						if (!$user.UserPrincipalName) {
+							Write-Verbose "Unable to find UserPrincipalName for $user"
+						}else 
+							if (!$changes.ContainsKey($user.UserPrincipalName)) {
+								$newObj = New-Object -TypeName PSObject -Property @{UserPrincipalName = $user.UserPrincipalName; RemoveSkuID = ""; AddSkuID = ""}
+								Add-Member -InputObject $newObj -Name 'SortOrder' -Value $SortOrderScriptBlock -MemberType ScriptProperty
+								Add-Member -InputObject $newObj -Name 'Command' -Value $CommandScriptBlock -MemberType ScriptProperty
+								Add-Member -InputObject $newObj -Name 'ChangeType' -Value $ChangeTypeScriptBlock -MemberType ScriptProperty
+								$changes.Add($user.UserPrincipalName, $newObj)
+							}
+							if ($user.SideIndicator -eq '=>') {	#remove
+								($changes.Item($user.UserPrincipalName)).RemoveSkuID = $skuid
+							} else {	#add
+								($changes.Item($user.UserPrincipalName)).AddSkuID = $skuid
+							}
 						}
 					}
 				} else {
