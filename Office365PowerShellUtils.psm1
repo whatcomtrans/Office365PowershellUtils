@@ -231,5 +231,97 @@ function Update-MsolUserUsageLocation {
 	}
 }
 
+<#
+.SYNOPSIS
+Makes it easy to set proxyAddress values in local Active Directory (used with DirSync).  ProxyAddresses can be Added, Removed or just set as Default.
+
+.EXAMPLE
+Change-ProxyAddress -Identity TestProxy -ProxyAddress "testproxy1@ridewta.com" -IsDefault -Add -Confirm
+#>
+function Change-ProxyAddress {
+    [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName="Add")]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        $Identity,
+        [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address to add, without the prefix.  Example, johndoe@domain.com")]
+        [String]$ProxyAddress,
+        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address to add, without the prefix.  Example, johndoe@domain.com")]
+        [String]$Prefix="smtp",
+        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        [Switch] $IsDefault,
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ParameterSetName="Add",HelpMessage="Add the ProxyAddress with the specified Prefix.")]
+        [Switch] $Add,
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ParameterSetName="Remove",HelpMessage="Remove the ProxyAddress with the specified Prefix.")]
+        [Switch] $Remove
+    )
+
+    process {
+        $_identity = $Identity
+        [String] $_changeaddress = $ProxyAddress
+        [boolean] $_isDefault = $IsDefault
+        [String] $_prefix = $Prefix
+
+
+        [boolean] $_exists = $false
+
+        if ($_isDefault) {
+            $_prefix = $_prefix.ToUpper()
+        }
+        [String] $_changeproxyaddress = $_prefix + ":" + $_changeaddress
+
+        #Get all of the existing proxy addresses
+        [System.Collections.ArrayList] $_addresses = (Get-ADUser $_identity -Properties proxyAddresses).proxyAddresses
+
+
+        for ($i=0; $i -lt $_addresses.Count; $i++) {
+            [String] $_address = $_addresses[$i]
+            if ($_address -Like ($_prefix + ":*")) {
+                #Found a proxy address with matching prefix
+                if ($_address -like $_changeproxyaddress) {
+                    #already exists
+                    #if it should not be the default, change it
+                    if (!$_isDefault -and ($_address -CLike ($_prefix.ToUpper() + ":*"))) {
+                        #found the current default, need to change
+                        $_addresses[$i] = $_address.Replace($_prefix.ToUpper(), $_prefix)
+                    }
+
+                    #if it should be the default and it is not, change it
+                    if ($_isDefault -and ($_address -CLike ($_prefix.ToLower() + ":*"))) {
+                        #found the current default, need to change
+                        $_addresses[$i] = $_address.Replace($_prefix.ToLower(), $_prefix)
+                    }
+
+                    #note that it exists so that Add does not run
+                    $_exists = $true
+            
+                    #if this is a remove process, remove it
+                    if ($Remove) {
+                        #Remove it
+                        $_addresses.RemoveAt($i)
+                    }
+                } else {
+                    #a different proxy with same prefix
+                    if ($_isDefault -and ($_address -CLike ($_prefix + ":*"))) {
+                        #found the current default, need to change
+                        $_addresses[$i] = $_address.Replace($_prefix, $_prefix.ToLower())
+                    }
+                }
+            }
+        }
+        if (($_exists -eq $false) -and $Add) {
+                #proxy not found, add it
+                $_addresses += $_changeproxyaddress
+        }
+
+        [Array] $_changedaddresses = $_addresses.ToArray()
+        $_changedaddresses
+        if ($_addresses.Count -gt 0) {
+            Set-ADUser $_identity -Replace @{proxyAddresses=$_changedaddresses}
+        } else {
+            Set-ADUser $_identity -Clear proxyAddresses
+        }
+    }
+}
+
 Echo "Module Loaded"
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation"
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Change-ProxyAddress"
