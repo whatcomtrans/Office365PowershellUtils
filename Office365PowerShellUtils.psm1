@@ -166,7 +166,7 @@ function Update-MsolLicensedUsersFromGroup {
 
 <#
 .SYNOPSIS
-Performs one-way sync of user license assignment with group membership.  Requires ActiveDirectory and MSOnline modules and active connection to MSOL services.
+Performs one-way sync of user usage location based on group membership.  Requires ActiveDirectory and MSOnline modules and active connection to MSOL services.
 
 .EXAMPLE
 TODO
@@ -204,7 +204,7 @@ function Update-MsolUserUsageLocation {
 		foreach($valADGroup in $ADGroup) {
 			#Get ADGroup, but first make sure it is null so we can detect failure
 			$objADGroup = $null
-			#If value is a string or somother object passable to Get-ADGroup
+			#If value is a string or some other object passable to Get-ADGroup
 			if ($locationByArray) {
 				$objADGroup = Get-ADGroup -Identity $valADGroup
 			} else {
