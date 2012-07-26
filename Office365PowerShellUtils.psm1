@@ -361,9 +361,9 @@ function Add-ProxyAddress {
         $Identity,
         [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
         [String]$ProxyAddress,
-        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
         [String]$Prefix="smtp",
-        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$true,HelpMessage="Should the proxyAddress be the default.")]
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,HelpMessage="Should the proxyAddress be the default.")]
         [Switch] $IsDefault
     )
 
@@ -386,7 +386,7 @@ function Remove-ProxyAddress {
         $Identity,
         [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
         [String]$ProxyAddress,
-        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
         [String]$Prefix="smtp"
     )
 
@@ -409,9 +409,9 @@ function Set-ProxyAddress {
         $Identity,
         [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
         [String]$ProxyAddress,
-        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
         [String]$Prefix="smtp",
-        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$true,HelpMessage="Should the proxyAddress be the default.")]
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,HelpMessage="Should the proxyAddress be the default.")]
         [Switch] $IsDefault
     )
 
@@ -453,7 +453,7 @@ function Test-ProxyAddress {
         $Identity,
         [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
         [String]$ProxyAddress,
-        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
         [String]$Prefix="smtp"
     )
 
@@ -474,7 +474,7 @@ function Get-ProxyAddressDefault {
     param(
         [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
         $Identity,
-        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
         [String]$Prefix="smtp"
     )
 
@@ -483,5 +483,53 @@ function Get-ProxyAddressDefault {
     }
 }
 
+<#
+.SYNOPSIS
+Adds display name and email address to a security group in local Active Directory thus enabling DirSync to add it as an Exchange Online Distribution Group.  Really just a shortcut to Set-ADGroup.
+
+.EXAMPLE
+Enable-SecurityGroupAsDistributionGroup -Identity GroupA -DisplayName "Group A" -EmailAddress "groupa@company.com"
+#>
+function Enable-SecurityGroupAsDistributionGroup {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of group to change, takes same as Set-ADGroup or pipe a group object.")]
+        $Identity,
+        [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The display name (for the address book).")]
+        [String]$DisplayName,
+        [Parameter(Mandatory=$true,Position=2,ValueFromPipeline=$false,HelpMessage="The email address for the group.")]
+        [String]$EmailAddress
+    )
+
+    process {
+        $_group = Get-ADGroup -Identity $Identity -Properties DisplayName,mail
+        $_group.DisplayName = $DisplayName
+        $_group.mail = $EmailAddress
+        Set-ADGroup -Instance $_group
+        Sync-ProxyAddress $Identity
+    }
+}
+
+<#
+.SYNOPSIS
+Removes display name and email address to a security group in local Active Directory thus enabling DirSync to remove it as an Exchange Online Distribution Group.  Really just a shortcut to Set-ADGroup.
+
+.EXAMPLE
+Disable-SecurityGroupAsDistributionGroup -Identity GroupA
+#>
+function Disable-SecurityGroupAsDistributionGroup {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of group to change, takes same as Set-ADGroup or pipe a group object.")]
+        $Identity
+    )
+
+    process {
+        $_group = Get-ADGroup -Identity $Identity -Properties DisplayName,mail
+        Remove-ProxyAddress $Identity -ProxyAddress $_group.mail
+        Set-ADGroup -Identity $Identity -Clear DisplayName,mail
+    }
+}
+
 Echo "Module Loaded"
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault"
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup"
