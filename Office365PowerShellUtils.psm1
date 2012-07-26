@@ -231,19 +231,12 @@ function Update-MsolUserUsageLocation {
 	}
 }
 
-<#
-.SYNOPSIS
-Makes it easy to set proxyAddress values in local Active Directory (used with DirSync).  ProxyAddresses can be Added, Removed or just set as Default.
-
-.EXAMPLE
-Change-ProxyAddress -Identity TestProxy -ProxyAddress "testproxy1@ridewta.com" -IsDefault -Add -Confirm
-#>
 function Change-ProxyAddress {
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName="Add")]
     param(
         [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
         $Identity,
-        [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address to add, without the prefix.  Example, johndoe@domain.com")]
+        [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address to add, without the prefix.  Example, johndoe@domain.com")]
         [String]$ProxyAddress,
         [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address to add, without the prefix.  Example, johndoe@domain.com")]
         [String]$Prefix="smtp",
@@ -252,7 +245,13 @@ function Change-ProxyAddress {
         [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ParameterSetName="Add",HelpMessage="Add the ProxyAddress with the specified Prefix.")]
         [Switch] $Add,
         [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ParameterSetName="Remove",HelpMessage="Remove the ProxyAddress with the specified Prefix.")]
-        [Switch] $Remove
+        [Switch] $Remove,
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ParameterSetName="Sync",HelpMessage="Sync the list of ProxyAddresses to make sure it includes the user's EmailAddress.")]
+        [Switch] $Sync,
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ParameterSetName="Test",HelpMessage="Test to see of the ProxyAddress with the specified Prefix exists.")]
+        [Switch] $Test,
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ParameterSetName="GetDefault",HelpMessage="Test to see of the ProxyAddress with the specified Prefix exists.")]
+        [Switch] $GetDefault
     )
 
     process {
@@ -261,17 +260,22 @@ function Change-ProxyAddress {
         [boolean] $_isDefault = $IsDefault
         [String] $_prefix = $Prefix
 
-
         [boolean] $_exists = $false
+        [boolean] $_changed = $false
+
+        #Get all of the existing proxy addresses
+        $_user = Get-ADUser $_identity -Properties proxyAddresses,EmailAddress
+        [System.Collections.ArrayList] $_addresses = $_user.proxyAddresses
+
+        if ($Sync) {
+            $_isDefault = $true
+            $_changeaddress = $_user.EmailAddress
+        }
 
         if ($_isDefault) {
             $_prefix = $_prefix.ToUpper()
         }
         [String] $_changeproxyaddress = $_prefix + ":" + $_changeaddress
-
-        #Get all of the existing proxy addresses
-        [System.Collections.ArrayList] $_addresses = (Get-ADUser $_identity -Properties proxyAddresses).proxyAddresses
-
 
         for ($i=0; $i -lt $_addresses.Count; $i++) {
             [String] $_address = $_addresses[$i]
@@ -283,12 +287,14 @@ function Change-ProxyAddress {
                     if (!$_isDefault -and ($_address -CLike ($_prefix.ToUpper() + ":*"))) {
                         #found the current default, need to change
                         $_addresses[$i] = $_address.Replace($_prefix.ToUpper(), $_prefix)
+                        $_changed = $true
                     }
 
                     #if it should be the default and it is not, change it
                     if ($_isDefault -and ($_address -CLike ($_prefix.ToLower() + ":*"))) {
                         #found the current default, need to change
                         $_addresses[$i] = $_address.Replace($_prefix.ToLower(), $_prefix)
+                        $_changed = $true
                     }
 
                     #note that it exists so that Add does not run
@@ -298,30 +304,184 @@ function Change-ProxyAddress {
                     if ($Remove) {
                         #Remove it
                         $_addresses.RemoveAt($i)
+                        $_changed = $true
                     }
                 } else {
                     #a different proxy with same prefix
                     if ($_isDefault -and ($_address -CLike ($_prefix + ":*"))) {
+                        #if just looking for default the just return value here
+                        if ($GetDefault) {
+                            return $_address
+                        }
                         #found the current default, need to change
                         $_addresses[$i] = $_address.Replace($_prefix, $_prefix.ToLower())
+                        $_changed = $true
                     }
                 }
             }
         }
-        if (($_exists -eq $false) -and $Add) {
+
+        if ($Test) {
+            if ($_exists) {
+                return $true
+            } else {
+                return $false
+            }
+        }
+
+        if (($_exists -eq $false) -and ($Add -or $Sync)) {
                 #proxy not found, add it
                 $_addresses += $_changeproxyaddress
+                $_changed = $true
         }
 
         [Array] $_changedaddresses = $_addresses.ToArray()
-        $_changedaddresses
-        if ($_addresses.Count -gt 0) {
-            Set-ADUser $_identity -Replace @{proxyAddresses=$_changedaddresses}
-        } else {
-            Set-ADUser $_identity -Clear proxyAddresses
+        #$_changedaddresses
+        if ($_changed) {
+            if ($_addresses.Count -gt 0) {
+                Set-ADUser $_identity -Replace @{proxyAddresses=$_changedaddresses}
+            } else {
+                Set-ADUser $_identity -Clear proxyAddresses
+            }
         }
     }
 }
 
+<#
+.SYNOPSIS
+Makes it easy to add a proxyAddress to a user in local Active Directory (used with DirSync).
+
+.EXAMPLE
+Add-ProxyAddress -Identity TestProxy -ProxyAddress "testproxy1@ridewta.com" -IsDefault -Confirm
+#>
+function Add-ProxyAddress {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        $Identity,
+        [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
+        [String]$ProxyAddress,
+        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [String]$Prefix="smtp",
+        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$true,HelpMessage="Should the proxyAddress be the default.")]
+        [Switch] $IsDefault
+    )
+
+    process {
+        Change-ProxyAddress -Identity $Identity -ProxyAddress $ProxyAddress -Prefix $Prefix -IsDefault:$IsDefault -Add
+    }
+}
+
+<#
+.SYNOPSIS
+Makes it easy to remove a proxyAddress from a user in local Active Directory (used with DirSync).
+
+.EXAMPLE
+Remove-ProxyAddress -Identity TestProxy -ProxyAddress "testproxy1@ridewta.com" -IsDefault -Confirm
+#>
+function Remove-ProxyAddress {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        $Identity,
+        [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
+        [String]$ProxyAddress,
+        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [String]$Prefix="smtp"
+    )
+
+    process {
+        Change-ProxyAddress -Identity $Identity -ProxyAddress $ProxyAddress -Prefix $Prefix -IsDefault:$false -Remove
+    }
+}
+
+<#
+.SYNOPSIS
+Makes it easy to set the default proxyAddress for a user in local Active Directory (used with DirSync).  It will add the address if it does not exist.
+
+.EXAMPLE
+Set-ProxyAddress -Identity TestProxy -ProxyAddress "testproxy1@ridewta.com" -IsDefault -Confirm
+#>
+function Set-ProxyAddress {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        $Identity,
+        [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
+        [String]$ProxyAddress,
+        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [String]$Prefix="smtp",
+        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$true,HelpMessage="Should the proxyAddress be the default.")]
+        [Switch] $IsDefault
+    )
+
+    process {
+        Change-ProxyAddress -Identity $Identity -ProxyAddress $ProxyAddress -Prefix $Prefix -IsDefault:$IsDefault -Add
+    }
+}
+
+<#
+.SYNOPSIS
+Makes it easy to sync a user's EmailAddress with the collection of proxyAddresses.  The user's EmailAddress will added if missing and set as the default SMTP ProxyAddress in local Active Directory (used with DirSync).
+
+.EXAMPLE
+Sync-ProxyAddress -Identity TestProxy -Confirm
+#>
+function Sync-ProxyAddress {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        $Identity
+    )
+
+    process {
+        Change-ProxyAddress -Identity $Identity -ProxyAddress "" -Prefix "smtp" -IsDefault:$true -Sync
+    }
+}
+
+<#
+.SYNOPSIS
+Makes it easy to test if a proxyAddress exists for specified user in local Active Directory (used with DirSync).
+
+.EXAMPLE
+Test-ProxyAddress -Identity TestProxy -ProxyAddress "testproxy1@ridewta.com"
+#>
+function Test-ProxyAddress {
+    [CmdletBinding(SupportsShouldProcess=$false)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        $Identity,
+        [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address, without the prefix.  Example, johndoe@domain.com")]
+        [String]$ProxyAddress,
+        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [String]$Prefix="smtp"
+    )
+
+    process {
+        return Change-ProxyAddress -Identity $Identity -ProxyAddress $ProxyAddress -Prefix $Prefix -Test
+    }
+}
+
+<#
+.SYNOPSIS
+Returns the default ProxyAddress for the specified Prefix (defaults to SMTP) in local Active Directory (used with DirSync).
+
+.EXAMPLE
+Get-ProxyAddressDefault -Identity TestProxy
+#>
+function Get-ProxyAddressDefault {
+    [CmdletBinding(SupportsShouldProcess=$false)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
+        $Identity,
+        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address prefix (smtp, sip, x500, etc)")]
+        [String]$Prefix="smtp"
+    )
+
+    process {
+        return Change-ProxyAddress -Identity $Identity -ProxyAddress "" -Prefix $Prefix -IsDefault -GetDefault
+    }
+}
+
 Echo "Module Loaded"
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Change-ProxyAddress"
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault"
