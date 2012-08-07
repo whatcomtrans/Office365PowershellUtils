@@ -255,28 +255,68 @@ function Change-ProxyAddress {
     )
 
     process {
+        #Handle parameters
         $_identity = $Identity
         [String] $_changeaddress = $ProxyAddress
         [boolean] $_isDefault = $IsDefault
         [String] $_prefix = $Prefix
 
+        #Set initial values
         [boolean] $_exists = $false
         [boolean] $_changed = $false
+        [int] $_identityType = 0
+        [String] $_syncAddress = ""
 
-        #Get all of the existing proxy addresses
-        $_user = Get-ADUser $_identity -Properties proxyAddresses,EmailAddress
-        [System.Collections.ArrayList] $_addresses = $_user.proxyAddresses
-
+        #First, find the user, group or mailbox to change.  Search local AD users, followed by local AD groups and then Mailboxes
+        try {
+            $_user = Get-ADUser $_identity -Properties proxyAddresses,mail -ErrorAction SilentlyContinue
+        }catch {}
+        if (!$_user) {
+            try {
+                $_user = Get-ADGroup $_identity -Properties proxyAddresses,mail -ErrorAction Stop
+            } catch {}
+            if (!$_user) {
+                $_user = Get-Mailbox $_identity
+                if ($_user) {
+                    $_identityType = 3
+                }
+            } else {
+                $_identityType = 2
+            }
+        } else {
+            $_identityType = 1
+        }
+        
+        #Second, now that we have the "user" object, retrieve the list or proxyAddresses and their current mail address
+        switch ($_identityType) {
+            0 {throw "Unable to find local AD User, Group or remote Mailbox that matches $_identity"}
+            1 {
+                [System.Collections.ArrayList] $_addresses = $_user.proxyAddresses
+                $_syncAddress = $_user.mail
+              }
+            2 {
+                [System.Collections.ArrayList] $_addresses = $_user.proxyAddresses
+                $_syncAddress = $_user.mail
+              }
+            3 {
+                [System.Collections.ArrayList] $_addresses = $_user.EmailAddresses
+                $_syncAddress = ($_user.PrimarySmtpAddress)
+              }
+        }
+        
+        #Third, handle switches
         if ($Sync) {
             $_isDefault = $true
-            $_changeaddress = $_user.EmailAddress
+            $_changeaddress = $_syncAddress
         }
 
         if ($_isDefault) {
             $_prefix = $_prefix.ToUpper()
         }
+
         [String] $_changeproxyaddress = $_prefix + ":" + $_changeaddress
 
+        #Fourth, iterate the list of addresses
         for ($i=0; $i -lt $_addresses.Count; $i++) {
             [String] $_address = $_addresses[$i]
             if ($_address -Like ($_prefix + ":*")) {
@@ -321,6 +361,7 @@ function Change-ProxyAddress {
             }
         }
 
+        #Fifth, handle the Test and Add switches
         if ($Test) {
             if ($_exists) {
                 return $true
@@ -335,13 +376,22 @@ function Change-ProxyAddress {
                 $_changed = $true
         }
 
+        #Sixth, make the changes
         [Array] $_changedaddresses = $_addresses.ToArray()
         #$_changedaddresses
         if ($_changed) {
             if ($_addresses.Count -gt 0) {
-                Set-ADUser $_identity -Replace @{proxyAddresses=$_changedaddresses}
+                if ($_identityType -eq 3) {
+                    Set-Mailbox -Identity ($_user.UserPrincipalName) -EmailAddresses $_changedaddresses
+                } else {
+                    Set-ADObject -Identity $_user -Replace @{proxyAddresses=$_changedaddresses}
+                }
             } else {
-                Set-ADUser $_identity -Clear proxyAddresses
+                if ($_identityType -eq 3) {
+                    Set-Mailbox -Identity ($_user.UserPrincipalName) -EmailAddresses $_changedaddresses
+                } else {
+                    Set-ADObject -Identity $_user -Clear proxyAddresses
+                }
             }
         }
     }
@@ -498,13 +548,20 @@ function Enable-SecurityGroupAsDistributionGroup {
         [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,HelpMessage="The display name (for the address book).")]
         [String]$DisplayName,
         [Parameter(Mandatory=$true,Position=2,ValueFromPipeline=$false,HelpMessage="The email address for the group.")]
-        [String]$EmailAddress
+        [String]$EmailAddress,
+        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$false,HelpMessage="Hide this group from the address list.  Defaults to false.")]
+        [Switch]$Hide
     )
 
     process {
-        $_group = Get-ADGroup -Identity $Identity -Properties DisplayName,mail
+        $_group = Get-ADGroup -Identity $Identity -Properties DisplayName,mail,msExchHideFromAddressLists
         $_group.DisplayName = $DisplayName
         $_group.mail = $EmailAddress
+        if ($Hide) {
+            $_group.msExchHideFromAddressLists = $true
+        } elseif ($_group.msExchHideFromAddressLists) {
+            $_group.msExchHideFromAddressLists = $false
+        }
         Set-ADGroup -Instance $_group
         Sync-ProxyAddress $Identity
     }
