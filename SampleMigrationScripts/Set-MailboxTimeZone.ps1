@@ -1,0 +1,1 @@
+Get-Mailbox -Filter {RecipientTypeDetails -eq 'UserMailbox'} | Set-MailboxRegionalConfiguration -TimeZone "Pacific Standard Time"–Language en-US
