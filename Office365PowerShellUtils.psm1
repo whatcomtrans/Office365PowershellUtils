@@ -588,4 +588,43 @@ function Disable-SecurityGroupAsDistributionGroup {
     }
 }
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup"
+<#
+.SYNOPSIS
+Forces directory sync
+
+.EXAMPLE
+Force-DirSync
+#>
+function Force-DirSync {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="DirSync server to invoke command on.  If not provided checks variable MyDirSyncComputerName for value.  If variable not set, it then prompts.")]
+            [String]$ComputerName,
+        [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,HelpMessage="Pauses 30 seconds and then displays newest event log entries to verify sucess or failure.")]
+            [Switch]$ShowOutput
+    )
+    if (!$ComputerName) {
+        if (!$MyDirSyncComputerName) {
+            $ComputerName = $_DirSyncComputerName
+        } else {
+            #Prompt
+            #TODO
+            Echo "ComputerName required"
+        }
+    }
+    if ($ComputerName.length -ge 1) {
+        $scb = {
+            #Force DirSync
+            Add-PSSnapin Coexistence-Configuration
+            Start-OnlineCoexistenceSync
+        }
+        Invoke-Command -ComputerName SRVMSOL1 -ScriptBlock $scb
+        if ($ShowOutput) {
+            Write-Host "DirSync should have started, we will pause 30 seconds and then display event log from SRVMSOL1.  The first entry should show it as completed with ID of 4 or 5."
+            Sleep 30
+            return (Get-EventLog -ComputerName $ComputerName -LogName "Application" -Newest 5 -Source "Directory Synchronization")
+        }
+    }
+}
+
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Force-DirSync"
