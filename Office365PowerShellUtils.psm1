@@ -598,20 +598,11 @@ Force-DirSync
 function Force-DirSync {
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(
-        [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="DirSync server to invoke command on.  If not provided checks variable MyDirSyncComputerName for value.  If variable not set, it then prompts.")]
+        [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="DirSync server to invoke command on.")]
             [String]$ComputerName,
         [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,HelpMessage="Pauses 30 seconds and then displays newest event log entries to verify sucess or failure.")]
             [Switch]$ShowOutput
     )
-    if (!$ComputerName) {
-        if (!$MyDirSyncComputerName) {
-            $ComputerName = $_DirSyncComputerName
-        } else {
-            #Prompt
-            #TODO
-            Echo "ComputerName required"
-        }
-    }
     if ($ComputerName.length -ge 1) {
         $scb = {
             #Force DirSync
