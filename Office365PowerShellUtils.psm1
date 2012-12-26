@@ -609,7 +609,7 @@ function Force-DirSync {
             Add-PSSnapin Coexistence-Configuration
             Start-OnlineCoexistenceSync
         }
-        Invoke-Command -ComputerName SRVMSOL1 -ScriptBlock $scb
+        Invoke-Command -ComputerName $ComputerName -ScriptBlock $scb
         if ($ShowOutput) {
             Write-Host "DirSync should have started, we will pause 30 seconds and then display event log from SRVMSOL1.  The first entry should show it as completed with ID of 4 or 5."
             Sleep 30
