@@ -618,4 +618,63 @@ function Force-DirSync {
     }
 }
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Force-DirSync"
+<#
+.SYNOPSIS
+This suspends a user mailbox by transitioning it to a shared mailbox, hiding it and preventing it from recieving email.
+This is used for employees who's role no longer requires email but may again one day.
+
+.EXAMPLE
+Suspend-UserMailbox -Identity UserA
+#>
+function Suspend-UserMailbox {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Mailbox of user to suspend, takes same as Get-Mailbox.")]
+        [String] $Identity
+    )
+
+    process {
+        $mb = Get-Mailbox $Identity
+
+        #Change mailbox to Shared
+        Set-Mailbox -Identity ($mb.Alias) -Type Shared -ErrorAction Continue
+
+        #Hide in GAL
+        Set-ADUser -Identity ($mb.Alias) -Replace @{msExchHideFromAddressLists = $true}
+        
+        #Block from recieving email
+        Set-Mailbox -Identity ($mb.Alias) -AcceptMessagesOnlyFrom "no-reply@ridewta.com"
+    }
+}
+
+<#
+.SYNOPSIS
+This reverses the Suspend-UserMailbox cmdlet.
+This resumes a user mailbox by transitioning it fram a shared mailbox, un-hiding it and allowing it to recieve email.
+This is used for employees who's role once again requires email.
+
+.EXAMPLE
+Resume-UserMailbox -Identity UserA
+#>
+function Resume-UserMailbox {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Mailbox of user to suspend, takes same as Get-Mailbox.")]
+        [String] $Identity
+    )
+
+    process {
+        $mb = Get-Mailbox $Identity
+
+        #Change mailbox to Regular
+        Set-Mailbox -Identity ($mb.Identity) -Type Regular -ErrorAction Continue
+
+        #Show in GAL
+        Set-ADUser -Identity ($mb.Alias) -Replace @{msExchHideFromAddressLists = $false}
+        
+        #Allow recieving email
+        Set-Mailbox -Identity ($mb.Identity) -AcceptMessagesOnlyFrom $null
+    }
+}
+
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Force-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox"
