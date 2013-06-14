@@ -33,7 +33,8 @@ function Update-MsolLicensedUsersFromGroup {
 	Param(
 		[Parameter(Mandatory=$true,ValueFromPipeline=$true,Position=0,HelpMessage="Group(s)")] [Object[]]$ADGroup,
 		[Parameter(Mandatory=$true,Position=1,ParameterSetName="SKUFromList",HelpMessage="The AccountSkuId(s) to match group membership against(see Get-MsolAccountSku).  If more then one value provided they are stepped through for each group provided.  If all groups should reference one sku, provide only one.  If each group should match a different sku, provide a sku for each group in same order of groups.")] [String[]]$AccountSkuId,
-		[Parameter(Mandatory=$true,Position=1,ParameterSetName="SKUFromGroup",HelpMessage="The AD Group property to retrieve the AccountSkuId to match group membership against(see Get-MsolAccountSku).  Use instead of AccountSkuID.  Defaults to the info/note attribute.")] [alias("Property")] [Object]$GroupSKUProperty = "info"
+		[Parameter(Mandatory=$true,Position=1,ParameterSetName="SKUFromGroup",HelpMessage="The AD Group property to retrieve the AccountSkuId to match group membership against(see Get-MsolAccountSku).  Use instead of AccountSkuID.  Defaults to the info/note attribute.")] [alias("Property")] [Object]$GroupSKUProperty = "info",
+        [Parameter(Mandatory=$false,Position=2,HelpMessage="Output change objects instead of making the changes.  This causes the cmdlet to return an array of objects which contain the script to run, type of change, etc.")] [Switch]$OutputOnly
 	)
 	Begin {
 		$groupCounter = 0
@@ -50,13 +51,13 @@ function Update-MsolLicensedUsersFromGroup {
 		$msolLicUsers = ""
 		
 		$ChangeTypeScriptBlock = {
-			if ($_.RemoveSkuID -ne "" -and $_.AddSkuID -eq "") {
+			if ($this.RemoveSkuID -ne "" -and $this.AddSkuID -eq "") {
 				Return "Remove"
-			} elseif ($_.RemoveSkuID -ne "" -and $_.AddSkuID -ne "") {
+			} elseif ($this.RemoveSkuID -ne "" -and $this.AddSkuID -ne "") {
 				Return "Transfer"
-			} elseif ($_.RemoveSkuID -eq "" -and $_.AddSkuID -ne "") {
+			} elseif ($this.RemoveSkuID -eq "" -and $this.AddSkuID -ne "") {
 				Return "Add"
-			} elseif ($_.RemoveSkuID -eq "" -and $_.AddSkuID -eq "") {
+			} elseif ($this.RemoveSkuID -eq "" -and $this.AddSkuID -eq "") {
 				Return "None"
 			}
 		}
@@ -127,6 +128,7 @@ function Update-MsolLicensedUsersFromGroup {
 								Add-Member -InputObject $newObj -Name 'SortOrder' -Value $SortOrderScriptBlock -MemberType ScriptProperty
 								Add-Member -InputObject $newObj -Name 'Command' -Value $CommandScriptBlock -MemberType ScriptProperty
 								Add-Member -InputObject $newObj -Name 'ChangeType' -Value $ChangeTypeScriptBlock -MemberType ScriptProperty
+                                Add-Member -InputObject $newObj -Name 'Invoke' -Value {Invoke-Expression $this.Command -ErrorAction continue} -MemberType ScriptMethod
 								$changes.Add($user.UserPrincipalName, $newObj)
 							}
 							if ($user.SideIndicator -eq '=>') {	#remove
@@ -160,7 +162,13 @@ function Update-MsolLicensedUsersFromGroup {
 		$changes.GetEnumerator() | ForEach-Object {$arrayOfChanges += $_.Value}
 		
 		#Execute the commands
-		$arrayOfChanges | Sort-Object -Property SortOrder | ForEach-Object $ProcessScriptBlock
+        if ($OutputOnly) {
+            return $arrayOfChanges | Sort-Object -Property SortOrder
+        }else {
+		    $arrayOfChanges | Sort-Object -Property SortOrder | ForEach-Object $ProcessScriptBlock
+            return ($arrayOfChanges | Sort-Object -Property SortOrder)
+        }
+        
 	}
 }
 
@@ -677,4 +685,24 @@ function Resume-UserMailbox {
     }
 }
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Force-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox"
+
+<#
+.SYNOPSIS
+Tests to see if a mailbox with a given identity exists, returns boolean
+
+.EXAMPLE
+Test-Mailbox -Identity UserA
+#>
+function Test-Mailbox {
+    [CmdletBinding(SupportsShouldProcess=$false)]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,HelpMessage="Identity to test for.")]
+        [String] $Identity
+    )
+
+    process {
+        return [bool] (Get-Mailbox $Identity -ErrorAction SilentlyContinue)
+    }
+}
+
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Force-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox"
