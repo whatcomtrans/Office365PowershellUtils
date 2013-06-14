@@ -34,5 +34,9 @@
         Import-PSSession $ExchangeOnlineSession -AllowClobber
         #$_mod = Get-Module -Name "tmp_*"
         #$_mod.AsCustomObject()
+
+        if (Get-Module Microsoft.Online.SharePoint.PowerShell) {
+            Connect-SPOService -Credential $Credential
+        }
     }
 }
