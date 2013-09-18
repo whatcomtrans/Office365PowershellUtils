@@ -1,9 +1,11 @@
 ﻿function Connect-Office365 {
-	[CmdletBinding(SupportsShouldProcess=$false)]
+	[CmdletBinding(SupportsShouldProcess=$false, DefaultParameterSetName="Username")]
 	Param(
-		[Parameter(Mandatory=$false,Position=1,HelpMessage="Credentials")]
+		[Parameter(Mandatory=$false,ParameterSetName="Username",HelpMessage="Credentials")]
+		    [String]$Username,
+		[Parameter(Mandatory=$false,ParameterSetName="Credentials",HelpMessage="Credentials")]
 		    [System.Management.Automation.PSCredential]$Credential,
-        [Parameter(Mandatory=$false,HelpMessage="Path to credentials")]
+        [Parameter(Mandatory=$false,ParameterSetName="CredentialsFile", HelpMessage="Path to credentials")]
 		    [String]$CredentialPath,
         [Parameter(Mandatory=$false,HelpMessage="Forces re-connection when already connected.")]
 		    [Switch]$Force
@@ -18,11 +20,14 @@
     if (!($existingConnection) -or ($Force)) {
 
         #Prompt for credential if not provided
-        if (!$Credential -and !$CredentialPath) {
-	        $Credential = Get-Credential #$env:username
+        if (!$Credential -and !$CredentialPath -and !$Username) {
+	        $Credential = Get-Credential
         }
         if ($CredentialPath) {
             $Credential = Import-PSCredential -Path $CredentialPath
+        }
+        if ($Username) {
+            $Credential = Get-Credential -UserName $Username
         }
 
         #Connect to MSOLService with credential
