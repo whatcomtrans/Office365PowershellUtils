@@ -27,7 +27,7 @@
             $Credential = Import-PSCredential -Path $CredentialPath
         }
         if ($Username) {
-            $Credential = Get-Credential -UserName $Username
+            $Credential = Get-Credential -UserName $Username -Message "Office 365 Credentials"
         }
 
         #Connect to MSOLService with credential
