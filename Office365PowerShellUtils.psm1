@@ -652,6 +652,9 @@ function Suspend-UserMailbox {
         
         #Block from recieving email
         Set-Mailbox -Identity ($mb.Alias) -AcceptMessagesOnlyFrom "no-reply@ridewta.com"
+
+        #Remove from any AD Groups which are also Distribution Groups
+        ((Get-ADUser -Identity $Identity -Properties MemberOf).MemberOf | Get-ADGroup) | %{if (Get-DistributionGroup -Identity $_.Name -ErrorAction SilentlyContinue) {Remove-ADGroupMember -Identity ($_.SamAccountName) -Member $Identity -Confirm:$false}}
     }
 }
 
@@ -682,6 +685,8 @@ function Resume-UserMailbox {
         
         #Allow recieving email
         Set-Mailbox -Identity ($mb.Identity) -AcceptMessagesOnlyFrom $null
+
+        #User will need to be added back to any distribution lists via another process
     }
 }
 
