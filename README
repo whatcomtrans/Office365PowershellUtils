@@ -1,10 +1,10 @@
 A module for manipulating Office 365.  It is being used/tested in a agency with about 100 accounts with DirSync and ADFS Single-Sign on.
 
-<h>DirSync Script</h>
+DirSync Script
 WTA utilizes a script that is scheduled to run based on the DirSync completion event.  It is trigerd based on the Application event log recieving EventID 114 from Application "Directory Synchronization".
 
 This script which uses saved credentials performs a number of tasks setting up defaults and managing licensing.  This is a redacted example of the script.
-<code>
+
 Echo "MSOLUserSync version 20140210"
 Import-Module MSOnline; 
 Import-Module ActiveDirectory; 
@@ -42,4 +42,3 @@ Echo ""
 Echo "Setting mailbox timezone"
 Get-Mailbox -Filter {RecipientTypeDetails -eq 'UserMailbox'} | Set-MailboxRegionalConfiguration -TimeZone "Pacific Standard Time" –Language en-US; 
 Echo "Done"
-</code>
