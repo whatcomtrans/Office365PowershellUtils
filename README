@@ -1,1 +1,44 @@
 A module for manipulating Office 365.  It is being used/tested in a agency with about 100 accounts with DirSync and ADFS Single-Sign on.
+
+[DirSync Script]
+WTA utilizes a script that is scheduled to run based on the DirSync completion event.  It is trigerd based on the Application event log recieving EventID 114 from Application "Directory Synchronization".
+
+This script which uses saved credentials performs a number of tasks setting up defaults and managing licensing.  This is a redacted example of the script.
+
+Echo "MSOLUserSync version 20140210"
+Import-Module MSOnline; 
+Import-Module ActiveDirectory; 
+Import-Module 'C:\ScheduledTasks\PoSH_Modules\Office365PowershellUtils\Office365PowerShellUtils.psd1'; 
+Echo "Creating credential"
+$office365cred= Import-PSCredential -Path C:\ScheduledTasks\wtaadmin_as_office365admin.enc.xml; 
+Echo "Connecting to Office365"
+Connect-Office365 -Credential $office365cred; 
+$licensGroups = Get-ADGroup -Filter {SamAccountName -like "SLIC-MSOL-*"}
+Echo "Updating usagelocation"
+$licensGroups | Update-MsolUserUsageLocation -UsageLocation @('US') -Confirm:$false; 
+Echo "Updating licensed users"
+#Get list of license changes
+[Object[]] $licChanges = $licensGroups | Update-MsolLicensedUsersFromGroup -Property info -OutputOnly;
+
+#For any existing users that are having a license removed, suspend their mailbox
+Echo "Suspending user mailboxs"
+$licChanges | Where-Object -Property ChangeType -Value Remove -EQ | ForEach-Object {$_.UserPrincipalName} | Suspend-UserMailbox
+
+#Output changes
+Echo "What commands should be ran do to license changes"
+$licChanges | ForEach-Object {Echo $_.Command}
+
+#Invoke those changes
+Echo "Invoking commands"
+$licChanges | ForEach-Object {$_.Invoke()}
+
+#For any users that are having a license added back, see if they have a suspended user mailbox and if so, resume
+Echo "Resuming user mailboxs that had been suspended"
+$licChanges | Where-Object -Property ChangeType -Value Add -EQ | ForEach-Object {$_.UserPrincipalName} | ForEach-Object {if(Test-Mailbox $_) {Resume-UserMailbox $_}}
+
+Echo "Syncing user EmailAddress as default SMTP proxyAddress"
+Get-ADUser -Filter ("EmailAddress -like '*@*'") | Sync-ProxyAddress -Confirm:$false;
+Echo ""
+Echo "Setting mailbox timezone"
+Get-Mailbox -Filter {RecipientTypeDetails -eq 'UserMailbox'} | Set-MailboxRegionalConfiguration -TimeZone "Pacific Standard Time" –Language en-US; 
+Echo "Done"
