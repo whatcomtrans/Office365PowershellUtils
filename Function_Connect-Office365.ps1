@@ -34,12 +34,11 @@
         Connect-MsolService -Credential $Credential
 
         #Connect to Exchange Online session and import
-        New-Variable -Scope "Global" -Name ExchangeOnlineSession -Value(New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://ps.outlook.com/PowerShell/ -Credential $Credential -Authentication Basic -AllowRedirection)
-        #$ExchangeOnlineSession = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://ps.outlook.com/PowerShell/ -Credential $msolcred -Authentication Basic -AllowRedirection
+        New-Variable -Scope "Global" -Name ExchangeOnlineSession -Value(New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $UserCredential -Authentication Basic -AllowRedirection)
+        #$Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $UserCredential -Authentication Basic -AllowRedirection
         Import-PSSession $ExchangeOnlineSession -AllowClobber
-        #$_mod = Get-Module -Name "tmp_*"
-        #$_mod.AsCustomObject()
 
+        #Connect to SharePoint if available
         if (Get-Module Microsoft.Online.SharePoint.PowerShell) {
             Connect-SPOService -Credential $Credential
         }
