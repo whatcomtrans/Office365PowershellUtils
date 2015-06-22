@@ -1,4 +1,4 @@
-﻿function Connect-Office365 {
+﻿function global:Connect-Office365 {
 	[CmdletBinding(SupportsShouldProcess=$false, DefaultParameterSetName="Username")]
 	Param(
 		[Parameter(Mandatory=$false,ParameterSetName="Username",HelpMessage="Credentials")]
@@ -45,3 +45,4 @@
         }
     }
 }
+Echo "Function Connect-Office365 loaded"

@@ -603,7 +603,7 @@ Forces directory sync
 .EXAMPLE
 Force-DirSync
 #>
-function Force-DirSync {
+function Start-DirSync {
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="DirSync server to invoke command on.")]
@@ -625,6 +625,8 @@ function Force-DirSync {
         }
     }
 }
+
+Set-Alias -Name Force-DirSync -Value Start-DirSync -Description "Renamed Force-DirSync to Start-DirSync for a more compiant verb.  Alias for backards compatibility."
 
 <#
 .SYNOPSIS
@@ -710,4 +712,4 @@ function Test-Mailbox {
     }
 }
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Force-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox"
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Force-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox" -Alias *
