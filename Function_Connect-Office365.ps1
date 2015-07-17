@@ -20,14 +20,15 @@
     if (!($existingConnection) -or ($Force)) {
 
         #Prompt for credential if not provided
-        if (!$Credential -and !$CredentialPath -and !$Username) {
-	        $Credential = Get-Credential
-        }
         if ($CredentialPath) {
             $Credential = Import-PSCredential -Path $CredentialPath
         }
         if ($Username) {
             $Credential = Get-Credential -UserName $Username -Message "Office 365 Credentials"
+        }
+
+        if (!$Credential) {
+            $Credential = Get-Credential
         }
 
         #Connect to MSOLService with credential
