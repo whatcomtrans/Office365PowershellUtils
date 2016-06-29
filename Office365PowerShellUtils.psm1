@@ -246,7 +246,7 @@ function Change-ProxyAddress {
         $Identity,
         [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,HelpMessage="The proxy address to add, without the prefix.  Example, johndoe@domain.com")]
         [String]$ProxyAddress,
-        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The proxy address to add, without the prefix.  Example, johndoe@domain.com")]
+        [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,HelpMessage="The prefix.  Default is SMTP")]
         [String]$Prefix="smtp",
         [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$true,HelpMessage="Identity of user to change, takes same as Set-ADUser or pipe a User object.")]
         [Switch] $IsDefault,
