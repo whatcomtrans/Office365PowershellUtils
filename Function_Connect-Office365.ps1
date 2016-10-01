@@ -55,7 +55,7 @@ function global:Connect-Office365 {
         }
 
         #Connect to Security & Compliance Center
-        New-Variable -Scope "Global" -Name $ccSession -Value(New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://ps.compliance.protection.outlook.com/powershell-liveid/ -Credential $credential -Authentication Basic -AllowRedirection)
+        New-Variable -Scope "Global" -Name $ccSession -Value(New-PSSession -ConfigurationName SecurityCompliance -ConnectionUri https://ps.compliance.protection.outlook.com/powershell-liveid/ -Credential $credential -Authentication Basic -AllowRedirection)
         Import-PSSession $ccSession -Prefix cc
     }
 }
