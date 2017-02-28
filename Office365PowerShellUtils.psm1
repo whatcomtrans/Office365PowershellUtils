@@ -598,36 +598,34 @@ function Disable-SecurityGroupAsDistributionGroup {
 
 <#
 .SYNOPSIS
-Forces directory sync
+Starts directory sync
 
 .EXAMPLE
-Force-DirSync
+Start-DirSync
 #>
 function Start-DirSync {
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(
-        [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="DirSync server to invoke command on.")]
-            [String]$ComputerName,
-        [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,HelpMessage="Pauses 30 seconds and then displays newest event log entries to verify sucess or failure.")]
-            [Switch]$ShowOutput
+        [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="ADSync server to invoke command on.")]
+            [String]$ComputerName
     )
     if ($ComputerName.length -ge 1) {
-        $scb = {
-            #Force DirSync
-            Add-PSSnapin Coexistence-Configuration
-            Start-OnlineCoexistenceSync
-        }
-        Invoke-Command -ComputerName $ComputerName -ScriptBlock $scb
-        if ($ShowOutput) {
-            Write-Host "DirSync should have started, we will pause 30 seconds and then display event log from SRVMSOL1.  The first entry should show it as completed with ID of 4 or 5."
-            Sleep 30
-            return (Get-EventLog -ComputerName $ComputerName -LogName "Application" -Newest 5 -Source "Directory Synchronization")
-        }
+        Invoke-Command -ComputerName $ComputerName -ScriptBlock {Import-Module ADSync; Start-ADSyncSyncCycle -PolicyType Delta}
     }
 }
 
 Set-Alias -Name Force-DirSync -Value Start-DirSync -Description "Renamed Force-DirSync to Start-DirSync for a more compiant verb.  Alias for backards compatibility."
 
+function Get-NextDirSync {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+        [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="ADSync server to invoke command on.")]
+            [String]$ComputerName
+    )
+    if ($ComputerName.length -ge 1) {
+        Invoke-Command -ComputerName $ComputerName -ScriptBlock {Import-Module ADSync; [DateTime]::Parse((get-adsyncscheduler).NextSyncCycleStartTimeInUTC.ToString() + " GMT");}
+    }
+}
 <#
 .SYNOPSIS
 This suspends a user mailbox by transitioning it to a shared mailbox, hiding it and preventing it from recieving email.
@@ -712,4 +710,4 @@ function Test-Mailbox {
     }
 }
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox" -Alias *
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox", "Get-NextDirSync" -Alias *
