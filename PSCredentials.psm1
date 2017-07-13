@@ -20,6 +20,7 @@
 #			Output: PSCredential object
 
 function Export-PSCredential {
+	[CmdletBinding(SupportsShouldProcess=$false)]
 	param ( $Credential = (Get-Credential), $Path = "credentials.enc.xml" )
 
 	# Look at the object type of the $Credential parameter to determine how to handle it
@@ -36,7 +37,7 @@ function Export-PSCredential {
 	$export = "" | Select-Object Username, EncryptedPassword
 	
 	# Give object a type name which can be identified later
-	$export.PSObject.TypeNames.Insert(0,’ExportedPSCredential’)
+	$export.PSObject.TypeNames.Insert(0,'ExportedPSCredential')
 	
 	$export.Username = $Credential.Username
 
@@ -53,6 +54,7 @@ function Export-PSCredential {
 }
 
 function Import-PSCredential {
+	[CmdletBinding(SupportsShouldProcess=$false)]
 	param ( $Path = "credentials.enc.xml" )
 
 	# Import credential file
@@ -72,4 +74,4 @@ function Import-PSCredential {
 	Write-Output $Credential
 }
 
-Export-ModuleMember -Function "Export-PSCredential", "Import-PSCredential"
+Export-ModuleMember -Cmdlet "Export-PSCredential", "Import-PSCredential"
