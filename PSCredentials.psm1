@@ -74,4 +74,4 @@ function Import-PSCredential {
 	Write-Output $Credential
 }
 
-Export-ModuleMember -Cmdlet "Export-PSCredential", "Import-PSCredential"
+Export-ModuleMember -Function "Export-PSCredential", "Import-PSCredential"
