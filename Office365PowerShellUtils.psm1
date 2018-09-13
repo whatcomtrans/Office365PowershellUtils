@@ -108,7 +108,7 @@ function Update-MsolLicensedUsersFromGroup {
 						$skuid = $newskuid
 						$groupsUsers = @()
 						#Get licensed users
-						$msolLicUsers = Get-MsolUser | Find-MsolUsersWithLicense $skuid
+						$msolLicUsers = Get-MsolUser -EnabledFilter EnabledOnly -All | Find-MsolUsersWithLicense $skuid
 					}
 					
 					#Get group members
