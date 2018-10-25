@@ -1,6 +1,8 @@
 ﻿<#
 See https://technet.microsoft.com/en-us/library/dn568015.aspx
 Expects all modules to be imported or available to import on demand
+
+TODO - Modify to support multi-factor authentication
 #>
 function global:Connect-Office365 {
 	[CmdletBinding(SupportsShouldProcess=$false, DefaultParameterSetName="Username")]
