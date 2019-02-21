@@ -320,6 +320,8 @@ function Change-ProxyAddress {
 
         if ($_isDefault) {
             $_prefix = $_prefix.ToUpper()
+        } else {
+            $_prefix = $_prefix.ToLower(()
         }
 
         [String] $_changeproxyaddress = $_prefix + ":" + $_changeaddress
