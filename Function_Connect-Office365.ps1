@@ -43,7 +43,7 @@ function global:Connect-Office365 {
         #Connect to Exchange Online session and import
         New-Variable -Scope "Global" -Name ExchangeOnlineSession -Value(New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $Credential -Authentication Basic -AllowRedirection)
         #$Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $UserCredential -Authentication Basic -AllowRedirection
-        Import-PSSession $ExchangeOnlineSession -AllowClobber
+        Import-PSSession $ExchangeOnlineSession -AllowClobber -DisableNameChecking | Out-Null
 
         #Connect to SharePoint if available
         if (Get-Module Microsoft.Online.SharePoint.PowerShell) {
