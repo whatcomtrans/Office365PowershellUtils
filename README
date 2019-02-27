@@ -42,3 +42,5 @@ Echo ""
 Echo "Setting mailbox timezone"
 Get-Mailbox -Filter {RecipientTypeDetails -eq 'UserMailbox'} | Set-MailboxRegionalConfiguration -TimeZone "Pacific Standard Time" –Language en-US; 
 Echo "Done"
+
+Needs work.
