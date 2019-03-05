@@ -650,7 +650,7 @@ function Suspend-UserMailbox {
         Set-Mailbox -Identity ($mb.Alias) -Type Shared -ErrorAction Continue
 
         #Hide in GAL
-        Set-ADUser -Identity ($mb.Alias) -Replace @{msExchHideFromAddressLists = $true}
+        Set-ADUser -Identity ($Identity) -Replace @{msExchHideFromAddressLists = $true}
         
         #Block from recieving email
         Set-Mailbox -Identity ($mb.Alias) -AcceptMessagesOnlyFrom "no-reply@ridewta.com"
