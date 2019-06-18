@@ -657,6 +657,12 @@ function Suspend-UserMailbox {
 
         #Remove from any AD Groups which are also Distribution Groups
         ((Get-ADUser -Identity $Identity -Properties MemberOf).MemberOf | Get-ADGroup) | %{if (Get-DistributionGroup -Identity $_.Name -ErrorAction SilentlyContinue) {Remove-ADGroupMember -Identity ($_.SamAccountName) -Member $Identity -Confirm:$false}}
+
+        #Remove and distribution groups for which the mailbox is a member
+        Clear-MailboxMemberOf $mb.Alias
+
+        #Remove any Office365 Groups for which the mailbox is a member
+        # TODO: 
     }
 }
 
@@ -712,4 +718,34 @@ function Test-Mailbox {
     }
 }
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox", "Get-NextDirSync" -Alias *
+# use-cas -SkipUpdate
+# Connect-Office365 -Credential (Get-Credential)
+
+
+function Get-MailboxMemberOf {
+    [CmdletBinding(SupportsShouldProcess=$false)]
+    Param (
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
+        [String] $Identity
+    )
+    Process {
+        $mb = Get-mailbox $Identity 
+        forEach($g in Get-DistributionGroup) {
+            Get-DistributionGroupmember $g.Name | where Guid -eq $mb.Guid | %{Write-Output $g}
+        }
+    }
+}
+
+function Clear-MailboxMemberOf {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    Param (
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
+        [String] $Identity
+    )
+    Process {
+        (Get-MailboxMemberOf $Identity) | Remove-DistributionGroupMember -Member $Identity -BypassSecurityGroupManagerCheck
+    }
+}
+
+
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox", "Get-NextDirSync", "Get-MailboxMemberOf", "Clear-MailboxMemberOf" -Alias *
