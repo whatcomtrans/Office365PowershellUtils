@@ -660,9 +660,6 @@ function Suspend-UserMailbox {
 
         #Remove and distribution groups for which the mailbox is a member
         Clear-MailboxMemberOf $mb.Alias
-
-        #Remove any Office365 Groups for which the mailbox is a member
-        # TODO: 
     }
 }
 
