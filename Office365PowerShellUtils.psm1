@@ -659,7 +659,7 @@ function Suspend-UserMailbox {
         ((Get-ADUser -Identity $Identity -Properties MemberOf).MemberOf | Get-ADGroup) | %{if (Get-DistributionGroup -Identity $_.Name -ErrorAction SilentlyContinue) {Remove-ADGroupMember -Identity ($_.SamAccountName) -Member $Identity -Confirm:$false}}
 
         #Remove and distribution groups for which the mailbox is a member
-        Clear-MailboxMemberOf $mb.Alias
+        Clear-MailboxMemberOf $mb.Alias -Confirm:$false
     }
 }
 
@@ -740,7 +740,7 @@ function Clear-MailboxMemberOf {
         [String] $Identity
     )
     Process {
-        (Get-MailboxMemberOf $Identity) | Remove-DistributionGroupMember -Member $Identity -BypassSecurityGroupManagerCheck
+        (Get-MailboxMemberOf $Identity) | Remove-DistributionGroupMember -Member $Identity -BypassSecurityGroupManagerCheck -Confirm:$false
     }
 }
 
