@@ -744,5 +744,12 @@ function Clear-MailboxMemberOf {
     }
 }
 
+function Use-Office365 {
+    [CmdletBinding(SupportsShouldProcess=$false)]
+    Param ()
+    End {
+        Write-Output "Ready to Connect-Office365"
+    }
+}
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox", "Get-NextDirSync", "Get-MailboxMemberOf", "Clear-MailboxMemberOf" -Alias *
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox", "Get-NextDirSync", "Get-MailboxMemberOf", "Clear-MailboxMemberOf", "Use-Office365" -Alias *
