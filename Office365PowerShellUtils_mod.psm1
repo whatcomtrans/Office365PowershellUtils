@@ -187,7 +187,6 @@ function Update-MsolUserUsageLocation {
 		[Parameter(Mandatory=$true,Position=1,ParameterSetName="UsageLocationFromGroup",HelpMessage="The AD Group property to retrieve the UsageLocation value from.  Defaults to the info/note attribute.")] [alias("Property")] [Object]$GroupUsageLocationProperty = "info"
 	)
 	Begin {
-		$newUsageLocation = ""
 		$groupCounter = 0
 		if ($UsageLocation) {
 			#use array
@@ -606,7 +605,7 @@ Starts directory sync
 Start-DirSync
 #>
 function Start-DirSync {
-    [CmdletBinding(SupportsShouldProcess=$true)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="ADSync server to invoke command on.")]
             [String]$ComputerName
@@ -619,7 +618,7 @@ function Start-DirSync {
 Set-Alias -Name Force-DirSync -Value Start-DirSync -Description "Renamed Force-DirSync to Start-DirSync for a more compiant verb.  Alias for backards compatibility."
 
 function Get-NextDirSync {
-    [CmdletBinding(SupportsShouldProcess=$true)]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$false,HelpMessage="ADSync server to invoke command on.")]
             [String]$ComputerName
@@ -656,7 +655,7 @@ function Suspend-UserMailbox {
         Set-Mailbox -Identity ($mb.Alias) -AcceptMessagesOnlyFrom "no-reply@ridewta.com"
 
         #Remove from any AD Groups which are also Distribution Groups
-        ((Get-ADUser -Identity $Identity -Properties MemberOf).MemberOf | Get-ADGroup) | %{if (Get-DistributionGroup -Identity $_.Name -ErrorAction SilentlyContinue) {Remove-ADGroupMember -Identity ($_.SamAccountName) -Member $Identity -Confirm:$false}}
+        ((Get-ADUser -Identity $Identity -Properties MemberOf).MemberOf | Get-ADGroup) | ForEach-Object {if (Get-DistributionGroup -Identity $_.Name -ErrorAction SilentlyContinue) {Remove-ADGroupMember -Identity ($_.SamAccountName) -Member $Identity -Confirm:$false}}
 
         #Remove and distribution groups for which the mailbox is a member
         Clear-MailboxMemberOf $mb.Alias -Confirm:$false
@@ -728,7 +727,7 @@ function Get-MailboxMemberOf {
     Process {
         $mb = Get-mailbox $Identity 
         forEach($g in Get-DistributionGroup) {
-            Get-DistributionGroupmember $g.Name | where Guid -eq $mb.Guid | %{Write-Output $g}
+            Get-DistributionGroupmember $g.Name | Where-Object Guid -eq $mb.Guid | %{Write-Output $g}
         }
     }
 }
@@ -744,12 +743,43 @@ function Clear-MailboxMemberOf {
     }
 }
 
-function Use-Office365 {
-    [CmdletBinding(SupportsShouldProcess=$false)]
-    Param ()
-    End {
-        Write-Output "Ready to Connect-Office365"
+function Connect-Office365 {
+	[CmdletBinding(SupportsShouldProcess=$false, DefaultParameterSetName="Username")]
+	Param(
+		[Parameter(Mandatory=$false,ParameterSetName="Username",HelpMessage="Credentials")]
+		    [String]$Username,
+		[Parameter(Mandatory=$false,ParameterSetName="Credentials",HelpMessage="Credentials")]
+		    [System.Management.Automation.PSCredential]$Credential,
+        [Parameter(Mandatory=$false,ParameterSetName="CredentialsFile", HelpMessage="Path to credentials")]
+            [String]$CredentialPath,
+        [Parameter(Mandatory=$false, HelpMessage="To use MFA with ExchangeOnline v2")]
+            [Switch]$UseMFA
+    )
+    
+    Process {
+
+        #Prompt for credential if not provided
+        if ($CredentialPath) {
+            $Credential = Import-PSCredential -Path $CredentialPath
+        }
+        if ($Username) {
+            $Credential = Get-Credential -UserName $Username -Message "Office 365 Credentials"
+        }
+
+        if (!$Credential) {
+            $Credential = Get-Credential
+        }
+
+        #Connect to MSOLService with credential
+        Connect-MsolService -Credential $Credential
+
+        #Connect to Exchange Online
+        if ($UseMFA) {
+            Connect-ExchangeOnline -UserPrincipalName $Credential.UserName
+        } else {
+            Connect-ExchangeOnline -Credential $Credential
+        }
     }
 }
 
-Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox", "Get-NextDirSync", "Get-MailboxMemberOf", "Clear-MailboxMemberOf", "Use-Office365" -Alias *
+Export-ModuleMember -Function "Find-MsolUsersWithLicense", "Update-MsolLicensedUsersFromGroup", "Update-MsolUserUsageLocation", "Add-ProxyAddress", "Remove-ProxyAddress", "Set-ProxyAddress", "Sync-ProxyAddress", "Test-ProxyAddress", "Get-ProxyAddressDefault", "Enable-SecurityGroupAsDistributionGroup", "Disable-SecurityGroupAsDistributionGroup", "Start-DirSync", "Suspend-UserMailbox", "Resume-UserMailbox", "Test-Mailbox", "Get-NextDirSync", "Get-MailboxMemberOf", "Clear-MailboxMemberOf", "Use-Office365", "Connect-Office365" -Alias "Force-DirSync"
