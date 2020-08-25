@@ -743,17 +743,36 @@ function Clear-MailboxMemberOf {
     }
 }
 
+# TODO: This cmdlet needs more documentation, better parameter settings and better error checking.
 function Connect-Office365 {
 	[CmdletBinding(SupportsShouldProcess=$false, DefaultParameterSetName="Username")]
 	Param(
 		[Parameter(Mandatory=$false,ParameterSetName="Username",HelpMessage="Credentials")]
-		    [String]$Username,
+		    [String] $Username,
 		[Parameter(Mandatory=$false,ParameterSetName="Credentials",HelpMessage="Credentials")]
-		    [System.Management.Automation.PSCredential]$Credential,
+		    [System.Management.Automation.PSCredential] $Credential,
         [Parameter(Mandatory=$false,ParameterSetName="CredentialsFile", HelpMessage="Path to credentials")]
-            [String]$CredentialPath,
-        [Parameter(Mandatory=$false, HelpMessage="To use MFA with ExchangeOnline v2")]
-            [Switch]$UseMFA
+            [String] $CredentialPath,
+        [Parameter(Mandatory=$false)]
+            [String] $CertificateFilePath,
+        [Parameter(Mandatory=$false)]
+            [SecureString] $CertificatePassword,
+        [Parameter(Mandatory=$false)]
+            [String] $CertificateThumbPrint,
+        [Parameter(Mandatory=$false)]
+            [String] $AppID,
+        [Parameter(Mandatory=$false)]
+            [String] $Organization,
+        [Parameter(Mandatory=$false)]
+            [Switch] $AvoidMFA,
+        [Parameter(Mandatory=$false)]
+            [Switch] $SkipSharePoint,
+        [Parameter(Mandatory=$false)]
+            [Switch] $SkipExchange,
+        [Parameter(Mandatory=$false)]
+            [Switch] $SkipTeams,
+        [Parameter(Mandatory=$false)]
+            [Switch] $SkipComplianceCenter
     )
     
     Process {
@@ -773,11 +792,49 @@ function Connect-Office365 {
         #Connect to MSOLService with credential
         Connect-MsolService -Credential $Credential
 
+        #Connect to SharePoint
+        if (!$SkipSharePoint) {
+            Connect-SPOService -Credential $Credential
+        }
+
+        #Connect to Teams
+        if (!$SkipTeams) {
+            Connect-MicrosoftTeams -Credential $Credential
+        }
+
         #Connect to Exchange Online
-        if ($UseMFA) {
-            Connect-ExchangeOnline -UserPrincipalName $Credential.UserName
-        } else {
-            Connect-ExchangeOnline -Credential $Credential
+        if (!$SkipExchange) {
+            <# Support for connection via certificate
+            See https://docs.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps
+            and https://docs.microsoft.com/en-us/azure/automation/shared-resources/certificates
+            #>
+            if ($AvoidMFA -or $AppID) {
+                if ($AppID) {
+                    if ($CertificateFilePath) {
+                        Connect-ExchangeOnline -CertificateFilePath $CertificateFilePath -CertificatePassword $CertificatePassword -AppId $AppID -Organization $Organization
+                    } elseif ($CertificateThumbPrint) {
+                        Connect-ExchangeOnline -CertificateThumbprint $CertificateThumbPrint -AppId $AppID -Organization $Organization
+                    } else {
+                        Write-Warning "Exchange not loaded.  CertificateFilePath or CertificateThumbprint required.  See https://docs.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps"
+                    }
+                } else {
+                    # Connect another way?  The old way?  Essentialy if AvoidMFA, this currently is same as SkipExchange.
+                    Write-Warning -Message "Exchange not loaded.  Currently no none MFA connection to Exchange Online available, skipping connection to Exchange Online"
+                }
+            } else {
+                Connect-ExchangeOnline -UserPrincipalName $Credential.UserName
+            }
+        }
+
+        if (!$SkipComplianceCenter) {
+            # IPPSSession supports both MFA and basic connect
+            if ($AvoidMFA) {
+                # Basic
+                Connect-IPPSSession -Credential $Credential
+            } else {
+                # MFA
+                Connect-IPPSSession -UserPrincipalName $Credential.UserName
+            }
         }
     }
 }
