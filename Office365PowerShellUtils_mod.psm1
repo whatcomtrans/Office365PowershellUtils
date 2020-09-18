@@ -760,6 +760,8 @@ function Connect-Office365 {
         [Parameter(Mandatory=$false)]
             [String] $CertificateThumbPrint,
         [Parameter(Mandatory=$false)]
+            [String] $SPOServiceURL,
+        [Parameter(Mandatory=$false)]
             [String] $AppID,
         [Parameter(Mandatory=$false)]
             [String] $Organization,
@@ -778,28 +780,42 @@ function Connect-Office365 {
     Process {
 
         #Prompt for credential if not provided
-        if ($CredentialPath) {
-            $Credential = Import-PSCredential -Path $CredentialPath
-        }
-        if ($Username) {
-            $Credential = Get-Credential -UserName $Username -Message "Office 365 Credentials"
-        }
+        if ($AvoidMFA) {
+            if ($CredentialPath) {
+                $Credential = Import-PSCredential -Path $CredentialPath
+            }
+            if ($Username) {
+                $Credential = Get-Credential -UserName $Username -Message "Office 365 Credentials"
+            }
 
-        if (!$Credential) {
-            $Credential = Get-Credential
+            if (!$Credential) {
+                $Credential = Get-Credential
+            }
         }
 
         #Connect to MSOLService with credential
-        Connect-MsolService -Credential $Credential
+        if ($AvoidMFA) {
+            Connect-MsolService -Credential $Credential
+        } else {
+            Connect-MsolService
+        }
 
         #Connect to SharePoint
         if (!$SkipSharePoint) {
-            Connect-SPOService -Credential $Credential
+            if ($AvoidMFA) {
+                Connect-SPOService -Url $SPOServiceURL -Credential $Credential
+            } else {
+                Connect-SPOService -Url $SPOServiceURL
+            }
         }
 
         #Connect to Teams
         if (!$SkipTeams) {
-            Connect-MicrosoftTeams -Credential $Credential
+            if ($AvoidMFA) {
+                Connect-MicrosoftTeams -Credential $Credential
+            } else {
+                Connect-MicrosoftTeams
+            }
         }
 
         #Connect to Exchange Online
@@ -808,7 +824,7 @@ function Connect-Office365 {
             See https://docs.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps
             and https://docs.microsoft.com/en-us/azure/automation/shared-resources/certificates
             #>
-            if ($AvoidMFA -or $AppID) {
+            if ($AvoidMFA) {
                 if ($AppID) {
                     if ($CertificateFilePath) {
                         Connect-ExchangeOnline -CertificateFilePath $CertificateFilePath -CertificatePassword $CertificatePassword -AppId $AppID -Organization $Organization
@@ -822,7 +838,7 @@ function Connect-Office365 {
                     Write-Warning -Message "Exchange not loaded.  Currently no none MFA connection to Exchange Online available, skipping connection to Exchange Online"
                 }
             } else {
-                Connect-ExchangeOnline -UserPrincipalName $Credential.UserName
+                Connect-ExchangeOnline
             }
         }
 
@@ -833,7 +849,7 @@ function Connect-Office365 {
                 Connect-IPPSSession -Credential $Credential
             } else {
                 # MFA
-                Connect-IPPSSession -UserPrincipalName $Credential.UserName
+                Connect-IPPSSession
             }
         }
     }
