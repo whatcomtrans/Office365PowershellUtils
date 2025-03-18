@@ -12,7 +12,7 @@
 # RootModule = ''
 
 # Version number of this module.
-ModuleVersion = '2.0.0.1'
+ModuleVersion = '3.0.0.6'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -51,9 +51,7 @@ PowerShellVersion = '3.0'
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
-RequiredModules = @('MSOnline', 
-               'ActiveDirectory', 
-               'ExchangeOnlineManagement')
+# RequiredModules = @('ActiveDirectory','MSOnline','ExchangeOnlineManagement','MicrosoftTeams', 'Microsoft.Online.SharePoint.PowerShell')
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()
@@ -127,7 +125,7 @@ PrivateData = @{
         # RequireLicenseAcceptance = $false
 
         # External dependent modules of this module
-        ExternalModuleDependencies = @('ActiveDirectory','MSOnline')
+        # ExternalModuleDependencies = @('ActiveDirectory','MSOnline','ExchangeOnlineManagement','MicrosoftTeams', 'Microsoft.Online.SharePoint.PowerShell')
 
     } # End of PSData hashtable
 
