@@ -794,11 +794,13 @@ function Connect-Office365 {
         }
 
         #Connect to MSOLService with credential
+        <#
         if ($AvoidMFA) {
             Connect-MsolService -Credential $Credential
         } else {
             Connect-MsolService
         }
+        #>
 
         #Connect to SharePoint
         if (!$SkipSharePoint) {
